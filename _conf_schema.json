@@ -1,0 +1,20 @@
+﻿{
+  "base_url": {
+    "type": "string",
+    "title": "服务器地址",
+    "description": "QQ Farm Bot UI 服务地址，例如 http://127.0.0.1:58130",
+    "default": ""
+  },
+  "token": {
+    "type": "string",
+    "title": "API Token",
+    "description": "x-admin-token，可选。为空时可使用管理员密码登录获取。",
+    "default": ""
+  },
+  "admin_password": {
+    "type": "string",
+    "title": "管理员密码",
+    "description": "用于登录获取新 token（可选）",
+    "default": ""
+  }
+}

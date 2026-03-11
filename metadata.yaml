@@ -1,10 +1,6 @@
-name: qqfarm
-version: "1.0.0"
-description: QQ农场助手插件，通过指令管理QQ农场账号
-author: 三七
-license: MIT
-repository: https://github.com/yourusername/astrbot_plugin_qqfarm
+﻿name: astrbot_plugin_qqfarm
 display_name: QQ农场助手
-support_platforms:
-  - aiocqhttp
-astrbot_version: ">=4.16"
+desc: QQ农场助手插件，通过指令管理QQ农场账号
+version: 1.0.0
+author: sanqi-ya
+repo: https://github.com/sanqi-ya/astrbot_plugin_qqfarm
