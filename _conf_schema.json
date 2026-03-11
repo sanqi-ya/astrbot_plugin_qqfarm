@@ -2,7 +2,7 @@
   "base_url": {
     "type": "string",
     "title": "服务器地址",
-    "description": "QQ Farm Bot UI 服务地址，例如 http://127.0.0.1:58130",
+    "description": "QQ Farm Bot UI 服务地址，例如 http://127.0.0.1:3000",
     "default": ""
   },
   "token": {
