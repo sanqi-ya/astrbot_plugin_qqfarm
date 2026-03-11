@@ -18,13 +18,13 @@
     "default": ""
   },
   "check_interval_sec": {
-    "type": "number",
+    "type": "int",
     "title": "掉线检测间隔（秒）",
     "description": "轮询账号状态的时间间隔，建议 >= 30",
     "default": 60
   },
   "notify_cooldown_sec": {
-    "type": "number",
+    "type": "int",
     "title": "通知冷却（秒）",
     "description": "同一账号连续掉线通知的最短间隔",
     "default": 300
