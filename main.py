@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any, List, Set
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
-from astrbot.api.message_components import Plain
+from astrbot.api.message_components import Plain, MessageChain
 from astrbot.api.star import Context, Star, register
 
 from .qq_farm_api import QQFarmAPI
@@ -156,7 +156,7 @@ class QQFarmPlugin(Star):
 
         for target in list(self._notify_targets):
             try:
-                await self.context.send_message(target, [Plain(text)])
+                await self.context.send_message(target, MessageChain([Plain(text)]))
             except Exception as e:
                 logger.exception(f"qqfarm: failed to notify {target}: {e}")
 
