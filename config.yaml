@@ -1,0 +1,11 @@
+﻿# QQ农场助手插件配置
+
+# 服务器地址
+base_url: ""
+
+# API 认证令牌
+token: ""
+
+# 管理员密码（用于登录获取新token，可选）
+admin_password: ""
+
