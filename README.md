@@ -1,4 +1,4 @@
-﻿# astrbot_plugin_qqfarm
+# astrbot_plugin_qqfarm
 
 QQ农场助手插件，通过指令管理 QQ 农场账号。
 

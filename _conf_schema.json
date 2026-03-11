@@ -1,4 +1,4 @@
-﻿{
+{
   "base_url": {
     "type": "string",
     "title": "服务器地址",
