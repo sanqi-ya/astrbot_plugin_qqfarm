@@ -3,15 +3,10 @@
 AstrBot plugin entry for QQ Farm.
 """
 
-import asyncio
-import json
-import os
-import time
-from typing import Optional, Dict, Any, List, Set
+from typing import Optional
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
-from astrbot.api.message_components import Plain
 from astrbot.api.star import Context, Star, register
 
 from .qq_farm_api import QQFarmAPI
@@ -31,13 +26,6 @@ class QQFarmPlugin(Star):
         super().__init__(context)
         self.config = config
         self.api: Optional[QQFarmAPI] = None
-
-        self._task: Optional[asyncio.Task] = None
-        self._state: Dict[str, bool] = {}
-        self._last_notify_ts: Dict[str, float] = {}
-        self._notify_targets: Set[str] = set()
-        self._targets_path = os.path.join(os.path.dirname(__file__), "notify_targets.json")
-        self._load_notify_targets()
 
     async def _init_api_async(self) -> None:
         """Initialize API client from plugin config (async)."""
@@ -71,124 +59,9 @@ class QQFarmPlugin(Star):
             await self._init_api_async()
         return self.api
 
-    def _load_notify_targets(self) -> None:
-        try:
-            if os.path.exists(self._targets_path):
-                with open(self._targets_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                if isinstance(data, list):
-                    self._notify_targets = set(str(x) for x in data if x)
-        except Exception:
-            self._notify_targets = set()
-
-    def _save_notify_targets(self) -> None:
-        try:
-            with open(self._targets_path, "w", encoding="utf-8") as f:
-                json.dump(sorted(self._notify_targets), f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.exception(f"qqfarm: failed to save notify targets: {e}")
-
-    def _get_origin_key(self, event: AstrMessageEvent) -> Optional[str]:
-        origin = getattr(event, "unified_msg_origin", None)
-        if origin is None:
-            return None
-        return str(origin)
-
     async def initialize(self):
         """Optional async initialization hook."""
         await self._init_api_async()
-        if self._task is None:
-            self._task = asyncio.create_task(self._poll_loop())
-
-    async def _poll_loop(self) -> None:
-        while True:
-            try:
-                await self._poll_once()
-            except Exception as e:
-                logger.exception(f"qqfarm: poll loop error: {e}")
-            await asyncio.sleep(self._get_interval())
-
-    def _get_interval(self) -> int:
-        try:
-            return max(10, int((self.config or {}).get("check_interval_sec", 60)))
-        except Exception:
-            return 60
-
-    def _get_cooldown(self) -> int:
-        try:
-            return max(0, int((self.config or {}).get("notify_cooldown_sec", 300)))
-        except Exception:
-            return 300
-
-    async def _poll_once(self) -> None:
-        api = await self._get_api()
-        if not api:
-            return
-
-        accounts = await api.get_accounts()
-        if not accounts:
-            return
-
-        now = time.time()
-        cooldown = self._get_cooldown()
-
-        for acc in accounts:
-            acc_id = str(acc.get("id"))
-            running = bool(acc.get("running"))
-
-            prev = self._state.get(acc_id)
-            self._state[acc_id] = running
-
-            if prev is True and running is False:
-                last_ts = self._last_notify_ts.get(acc_id, 0)
-                if now - last_ts >= cooldown:
-                    await self._notify_offline(acc)
-                    self._last_notify_ts[acc_id] = now
-
-    async def _notify_offline(self, acc: Dict[str, Any]) -> None:
-        if not self._notify_targets:
-            return
-
-        acc_id = acc.get("id")
-        qq = acc.get("qq")
-        nick = acc.get("nick")
-        text = f"⚠️ QQ农场账号掉线：ID={acc_id} QQ={qq} 昵称={nick}"
-
-        for target in list(self._notify_targets):
-            try:
-                await self.context.send_message(target, [Plain(text)])
-            except Exception as e:
-                logger.exception(f"qqfarm: failed to notify {target}: {e}")
-
-    @filter.command("农场订阅", aliases=["订阅农场掉线", "农场掉线订阅"])
-    async def farm_subscribe(self, event: AstrMessageEvent):
-        key = self._get_origin_key(event)
-        if not key:
-            yield event.plain_result("❌ 无法识别消息来源，订阅失败")
-            return
-
-        self._notify_targets.add(key)
-        self._save_notify_targets()
-        yield event.plain_result("✅ 已订阅农场掉线通知")
-
-    @filter.command("农场退订", aliases=["退订农场掉线", "取消农场订阅"])
-    async def farm_unsubscribe(self, event: AstrMessageEvent):
-        key = self._get_origin_key(event)
-        if not key:
-            yield event.plain_result("❌ 无法识别消息来源，退订失败")
-            return
-
-        if key in self._notify_targets:
-            self._notify_targets.remove(key)
-            self._save_notify_targets()
-            yield event.plain_result("✅ 已取消农场掉线通知")
-        else:
-            yield event.plain_result("ℹ️ 当前会话未订阅")
-
-    @filter.command("农场订阅列表", aliases=["农场订阅状态"])
-    async def farm_subscribe_list(self, event: AstrMessageEvent):
-        count = len(self._notify_targets)
-        yield event.plain_result(f"📌 当前订阅数量：{count}")
 
     @filter.command("农场状态", aliases=["农场", "农场信息", "qq农场"])
     async def farm_status(self, event: AstrMessageEvent):
@@ -329,17 +202,11 @@ class QQFarmPlugin(Star):
         help_text += "🔄 更新农场Code [账号ID] [Code] - 更新账号Code\n"
         help_text += "▶️ 启动农场 [账号ID] - 启动农场账号\n"
         help_text += "⏹️ 停止农场 [账号ID] - 停止农场账号\n"
-        help_text += "🛎️ 农场订阅 - 开启掉线通知\n"
-        help_text += "🔕 农场退订 - 关闭掉线通知\n"
-        help_text += "📌 农场订阅列表 - 查看订阅数量\n"
         help_text += "❓ 农场帮助 - 查看此帮助\n"
         help_text += "-" * 40
         yield event.plain_result(help_text)
 
     async def terminate(self):
-        if self._task:
-            self._task.cancel()
-            self._task = None
         if self.api:
             await self.api.close()
             self.api = None
