@@ -2,7 +2,7 @@
   "base_url": {
     "type": "string",
     "title": "服务器地址",
-    "description": "QQ Farm Bot UI 服务地址，例如 http://127.0.0.1:3000",
+    "description": "QQ Farm Bot UI 服务地址，例如 http://127.0.0.1:58130",
     "default": ""
   },
   "token": {
@@ -16,5 +16,17 @@
     "title": "管理员密码",
     "description": "用于登录获取新 token（可选）",
     "default": ""
+  },
+  "check_interval_sec": {
+    "type": "number",
+    "title": "掉线检测间隔（秒）",
+    "description": "轮询账号状态的时间间隔，建议 >= 30",
+    "default": 60
+  },
+  "notify_cooldown_sec": {
+    "type": "number",
+    "title": "通知冷却（秒）",
+    "description": "同一账号连续掉线通知的最短间隔",
+    "default": 300
   }
 }

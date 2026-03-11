@@ -6,6 +6,7 @@ QQ农场助手插件，通过指令管理 QQ 农场账号。
 - 查看账号状态与详情
 - 更新账号 Code
 - 启动/停止账号
+- 账号掉线通知（订阅后自动提醒）
 
 **安装**
 1. 将本仓库放入 AstrBot 的插件目录（通常为 `data/plugins/`）
@@ -22,6 +23,8 @@ pip install -r requirements.txt
 - `base_url`：QQ Farm Bot UI 服务地址（必填）
 - `token`：x-admin-token（可选）
 - `admin_password`：管理员密码（可选，用于登录获取新 token）
+- `check_interval_sec`：掉线检测间隔（秒）
+- `notify_cooldown_sec`：通知冷却（秒）
 
 **指令**
 - `农场状态`：查看所有账号状态
@@ -29,6 +32,9 @@ pip install -r requirements.txt
 - `更新农场Code [账号ID] [Code]`：更新账号 Code
 - `启动农场 [账号ID]`：启动账号
 - `停止农场 [账号ID]`：停止账号
+- `农场订阅`：订阅掉线通知
+- `农场退订`：取消订阅
+- `农场订阅列表`：查看订阅数量
 - `农场帮助`：查看帮助
 
 **注意**
