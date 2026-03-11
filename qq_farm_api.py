@@ -22,7 +22,11 @@ class QQFarmAPI:
         self.admin_password = admin_password
         self.token = token
         self.timeout = timeout
-        self._client = httpx.AsyncClient(timeout=timeout)
+        self._client: Optional[httpx.AsyncClient] = None
+
+    async def ainit(self) -> None:
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=self.timeout)
 
     def _get_headers(self) -> Dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -31,106 +35,94 @@ class QQFarmAPI:
         return headers
 
     async def close(self) -> None:
-        await self._client.aclose()
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        headers: Optional[Dict[str, str]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        if self._client is None:
+            await self.ainit()
+        assert self._client is not None
+
+        url = f"{self.base_url}{path}"
+        try:
+            response = await self._client.request(
+                method,
+                url,
+                headers=headers or self._get_headers(),
+                json=json_data,
+            )
+        except httpx.RequestError:
+            return None
+
+        if response.status_code != 200:
+            return None
+
+        try:
+            return response.json()
+        except ValueError:
+            return None
 
     async def login(self) -> bool:
-        url = f"{self.base_url}/api/login"
-        data = {"password": self.admin_password}
-
-        try:
-            response = await self._client.post(url, json=data, timeout=self.timeout)
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("ok") and result.get("data", {}).get("token"):
-                    self.token = result["data"]["token"]
-                    return True
+        result = await self._request("POST", "/api/login", json_data={"password": self.admin_password})
+        if not result:
             return False
-        except httpx.RequestError:
-            return False
+        if result.get("ok") and result.get("data", {}).get("token"):
+            self.token = result["data"]["token"]
+            return True
+        return False
 
     async def get_accounts(self) -> Optional[List[Dict[str, Any]]]:
-        url = f"{self.base_url}/api/accounts"
+        result = await self._request("GET", "/api/accounts")
+        if not result or not result.get("ok"):
+            return []
 
-        try:
-            response = await self._client.get(url, headers=self._get_headers(), timeout=self.timeout)
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("ok"):
-                    accounts = result.get("data", {}).get("accounts", result.get("data", []))
-                    if isinstance(accounts, dict):
-                        return accounts.get("accounts", [])
-                    return accounts if isinstance(accounts, list) else []
-            return []
-        except httpx.RequestError:
-            return []
+        data = result.get("data", {})
+        if isinstance(data, dict):
+            accounts = data.get("accounts", [])
+        else:
+            accounts = []
+
+        if isinstance(accounts, dict):
+            return accounts.get("accounts", [])
+        if isinstance(accounts, list):
+            return accounts
+        return []
 
     async def get_account(self, account_id: str) -> Optional[Dict[str, Any]]:
-        url = f"{self.base_url}/api/accounts/{account_id}"
         headers = self._get_headers()
         headers["x-account-id"] = account_id
 
-        try:
-            response = await self._client.get(url, headers=headers, timeout=self.timeout)
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("ok"):
-                    return result.get("data")
+        result = await self._request("GET", f"/api/accounts/{account_id}", headers=headers)
+        if not result or not result.get("ok"):
             return None
-        except httpx.RequestError:
-            return None
+        return result.get("data")
 
     async def update_code(self, account_id: str, code: str) -> bool:
-        url = f"{self.base_url}/api/accounts"
-        data = {"id": account_id, "code": code}
-
-        try:
-            response = await self._client.post(url, json=data, headers=self._get_headers(), timeout=self.timeout)
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("ok"):
-                    return True
-            return False
-        except httpx.RequestError:
-            return False
+        result = await self._request("POST", "/api/accounts", json_data={"id": account_id, "code": code})
+        return bool(result and result.get("ok"))
 
     async def start_account(self, account_id: str) -> bool:
-        url = f"{self.base_url}/api/accounts/{account_id}/start"
-
-        try:
-            response = await self._client.post(url, json={}, headers=self._get_headers(), timeout=self.timeout)
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("ok"):
-                    return True
-            return False
-        except httpx.RequestError:
-            return False
+        result = await self._request("POST", f"/api/accounts/{account_id}/start", json_data={})
+        return bool(result and result.get("ok"))
 
     async def stop_account(self, account_id: str) -> bool:
-        url = f"{self.base_url}/api/accounts/{account_id}/stop"
-
-        try:
-            response = await self._client.post(url, json={}, headers=self._get_headers(), timeout=self.timeout)
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("ok"):
-                    return True
-            return False
-        except httpx.RequestError:
-            return False
+        result = await self._request("POST", f"/api/accounts/{account_id}/stop", json_data={})
+        return bool(result and result.get("ok"))
 
     async def get_status(self, account_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        url = f"{self.base_url}/api/status"
         headers = self._get_headers()
         if account_id:
             headers["x-account-id"] = account_id
 
-        try:
-            response = await self._client.get(url, headers=headers, timeout=self.timeout)
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("ok"):
-                    return result.get("data")
+        result = await self._request("GET", "/api/status", headers=headers)
+        if not result or not result.get("ok"):
             return None
-        except httpx.RequestError:
-            return None
+        return result.get("data")
